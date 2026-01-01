@@ -38,8 +38,12 @@ A comprehensive digital banking platform enabling retail and corporate customers
 MiraDigital/
 ├── api-gateway/          # Central API Gateway (Express.js)
 ├── mifos-connector/      # MIFOS/Fineract Integration Service
+├── payment-service/      # Payment Integrations (Selcom, TIPS, GEPG)
+├── card-service/         # VISA SDK Integration (Cards, Tap-to-Pay)
+├── tenant-service/       # Multi-Tenant Management
 ├── web-portal/           # React Web Application
 ├── mobile-app/           # React Native Mobile Application
+├── ussd-gateway/         # USSD Gateway Service
 ├── shared/               # Shared utilities, types, constants
 ├── database/             # MongoDB schemas & migrations
 └── docs/                 # Documentation
@@ -51,11 +55,31 @@ MiraDigital/
 |-----------|------------|
 | API Gateway | Node.js + Express |
 | MIFOS Connector | Node.js + Axios |
+| Payment Service | Node.js (Selcom, TIPS, GEPG) |
+| Card Service | Node.js + VISA SDK |
 | Web Portal | React.js + Material UI |
 | Mobile App | React Native |
 | Database | MongoDB (sessions, audit) |
 | Cache | Redis (sessions, OTP) |
 | Core Banking | MIFOS/Fineract 1.11 |
+
+## 🏢 Multi-Tenancy Architecture
+
+The platform supports multiple tenants (banks/institutions) with:
+- **Tenant Isolation**: Each tenant has isolated data and configurations
+- **Custom Branding**: Logo, colors, theme per tenant
+- **Feature Toggles**: Enable/disable features per tenant
+- **Integration Configuration**: Separate API keys per tenant
+- **Rate Limiting**: Per-tenant rate limits
+
+## 💳 Payment Integrations
+
+| Provider | Purpose | Features |
+|----------|---------|----------|
+| **Selcom** | Bill Payments | Utility bills, airtime, subscriptions |
+| **TIPS** | Bank Transfers | Bank-to-bank, mobile money |
+| **GEPG** | Government | Taxes, fees, licenses |
+| **VISA SDK** | Cards | Tokenization, tap-to-pay, online payments |
 
 ## 🖥️ Server Configuration
 
