@@ -1,0 +1,42 @@
+{
+  "name": "miradigital",
+  "version": "1.0.0",
+  "description": "MiraDigital - Multi-Channel Digital Banking Platform",
+  "private": true,
+  "workspaces": [
+    "api-gateway",
+    "mifos-connector",
+    "web-portal",
+    "mobile-app"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run install:api && npm run install:connector && npm run install:web",
+    "install:api": "cd api-gateway && npm install",
+    "install:connector": "cd mifos-connector && npm install",
+    "install:web": "cd web-portal && npm install",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "cd api-gateway && npm run dev",
+    "dev:web": "cd web-portal && npm start",
+    "start:api": "cd api-gateway && npm start",
+    "start:web": "cd web-portal && npm run build && npx serve -s build",
+    "build:web": "cd web-portal && npm run build",
+    "test": "npm run test:api && npm run test:web",
+    "test:api": "cd api-gateway && npm test",
+    "test:web": "cd web-portal && npm test",
+    "lint": "npm run lint:api",
+    "lint:api": "cd api-gateway && npm run lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@5.75.185.137:/opt/middleware/MiraDigital.git"
+  },
+  "author": "MiraCore Team",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Build outputs
+dist/
+build/
+*/build/
+*/dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Mobile app specific
+mobile-app/android/.gradle/
+mobile-app/android/app/build/
+mobile-app/ios/Pods/
+mobile-app/ios/build/
+*.apk
+*.ipa
