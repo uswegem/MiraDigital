@@ -187,7 +187,7 @@ const tenantMiddleware = async (req, res, next) => {
     // Extract tenant from subdomain or header
     let tenantId = null;
     
-    // Method 1: Subdomain (miracore.miradigital.co.tz)
+    // Method 1: Subdomain (channel.miracore.app)
     const host = req.get('host');
     const subdomain = host.split('.')[0];
     if (subdomain && subdomain !== 'www' && subdomain !== 'api') {

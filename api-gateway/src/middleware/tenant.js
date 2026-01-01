@@ -33,7 +33,7 @@ const tenantMiddleware = (TenantModel) => {
 
       let tenantId = null;
 
-      // Method 1: Subdomain (miracore.miradigital.co.tz)
+      // Method 1: Subdomain (channel.miracore.app)
       const host = req.get('host') || '';
       const hostParts = host.split('.');
       if (hostParts.length >= 3) {
