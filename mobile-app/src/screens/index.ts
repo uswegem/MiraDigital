@@ -14,3 +14,6 @@ export { TapToPayScreen } from './cards/TapToPayScreen';
 
 // Bill Payment Screens
 export { BillPaymentScreen } from './bills/BillPaymentScreen';
+
+// QR Pay Screens
+export { QRPayScreen } from './qrpay/QRPayScreen';

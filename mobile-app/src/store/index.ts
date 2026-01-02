@@ -40,6 +40,7 @@ interface TenantConfig {
     loans: boolean;
     cards: boolean;
     tapToPay: boolean;
+    qrPay: boolean;
   };
 }
 

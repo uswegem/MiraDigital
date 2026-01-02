@@ -307,6 +307,283 @@ class ApiService {
     const response = await this.client.get('/config/tenant');
     return response.data;
   }
+
+  // ==================
+  // QR PAY / TanQR METHODS
+  // ==================
+
+  /**
+   * Validate QR merchant through TIPS
+   */
+  async validateQRMerchant(data: {
+    merchantId: string;
+    merchantName: string;
+    qrData: string;
+  }) {
+    const response = await this.client.post('/qr-pay/validate', data);
+    return response.data;
+  }
+
+  /**
+   * Lookup merchant by ID or pay bill number
+   */
+  async lookupQRMerchant(merchantId: string) {
+    const response = await this.client.get(`/qr-pay/lookup/${merchantId}`);
+    return response.data;
+  }
+
+  /**
+   * Process QR payment through TIPS
+   */
+  async payQRMerchant(data: {
+    fromAccountId: string;
+    merchantId: string;
+    merchantName: string;
+    merchantAccount: string;
+    merchantBank: string;
+    amount: number;
+    reference?: string;
+    qrData?: string;
+    currency?: string;
+  }) {
+    const response = await this.client.post('/qr-pay/pay', data);
+    return response.data;
+  }
+
+  /**
+   * Get QR payment history
+   */
+  async getQRPaymentHistory(params?: { page?: number; limit?: number }) {
+    const response = await this.client.get('/qr-pay/history', { params });
+    return response.data;
+  }
+
+  /**
+   * Get list of favorite/recent merchants
+   */
+  async getFavoriteMerchants() {
+    const response = await this.client.get('/qr-pay/favorites');
+    return response.data;
+  }
+
+  /**
+   * Add merchant to favorites
+   */
+  async addFavoriteMerchant(data: {
+    merchantId: string;
+    merchantName: string;
+    merchantAccount: string;
+    merchantBank: string;
+  }) {
+    const response = await this.client.post('/qr-pay/favorites', data);
+    return response.data;
+  }
+
+  // ====================
+  // ONBOARDING METHODS
+  // ====================
+
+  /**
+   * Initiate onboarding - sends OTP to phone
+   */
+  async initiateOnboarding(phone: string) {
+    const response = await this.client.post('/onboarding/initiate', { phone });
+    return response.data;
+  }
+
+  /**
+   * Verify OTP during onboarding
+   */
+  async verifyOnboardingOtp(applicationId: string, otp: string) {
+    const response = await this.client.post('/onboarding/verify-otp', { applicationId, otp });
+    return response.data;
+  }
+
+  /**
+   * Save personal information
+   */
+  async savePersonalInfo(applicationId: string, data: {
+    firstName: string;
+    middleName?: string;
+    lastName: string;
+    dateOfBirth: string;
+    gender: 'MALE' | 'FEMALE';
+    maritalStatus: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED';
+    email?: string;
+  }) {
+    const response = await this.client.post('/onboarding/personal-info', { applicationId, ...data });
+    return response.data;
+  }
+
+  /**
+   * Get document upload URL
+   */
+  async getDocumentUploadUrl(applicationId: string, documentType: string, side: 'front' | 'back') {
+    const response = await this.client.post('/onboarding/documents/upload-url', {
+      applicationId,
+      documentType,
+      side,
+    });
+    return response.data;
+  }
+
+  /**
+   * Confirm document upload
+   */
+  async confirmDocumentUpload(applicationId: string, data: {
+    documentType: string;
+    frontImageKey: string;
+    backImageKey?: string;
+  }) {
+    const response = await this.client.post('/onboarding/documents/confirm', { applicationId, ...data });
+    return response.data;
+  }
+
+  /**
+   * Verify NIDA number
+   */
+  async verifyNida(applicationId: string, data: {
+    nidaNumber: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+  }) {
+    const response = await this.client.post('/onboarding/verify-nida', { applicationId, ...data });
+    return response.data;
+  }
+
+  /**
+   * Start liveness session for selfie
+   */
+  async startLivenessSession(applicationId: string) {
+    const response = await this.client.post('/onboarding/selfie/liveness-session', { applicationId });
+    return response.data;
+  }
+
+  /**
+   * Confirm selfie upload
+   */
+  async confirmSelfie(applicationId: string, data: {
+    livenessSessionId: string;
+    selfieImageKey: string;
+  }) {
+    const response = await this.client.post('/onboarding/selfie/confirm', { applicationId, ...data });
+    return response.data;
+  }
+
+  /**
+   * Save address information
+   */
+  async saveAddress(applicationId: string, data: {
+    region: string;
+    district: string;
+    ward?: string;
+    street: string;
+    houseNumber?: string;
+    postalCode?: string;
+  }) {
+    const response = await this.client.post('/onboarding/address', { applicationId, ...data });
+    return response.data;
+  }
+
+  /**
+   * Save employment information
+   */
+  async saveEmployment(applicationId: string, data: {
+    status: 'EMPLOYED' | 'SELF_EMPLOYED' | 'UNEMPLOYED' | 'STUDENT' | 'RETIRED';
+    employerName?: string;
+    occupation?: string;
+    monthlyIncome?: number;
+    incomeSource?: string;
+  }) {
+    const response = await this.client.post('/onboarding/employment', { applicationId, ...data });
+    return response.data;
+  }
+
+  /**
+   * Save next of kin information
+   */
+  async saveNextOfKin(applicationId: string, data: {
+    name: string;
+    relationship: 'SPOUSE' | 'PARENT' | 'CHILD' | 'SIBLING' | 'OTHER';
+    phone: string;
+  }) {
+    const response = await this.client.post('/onboarding/next-of-kin', { applicationId, ...data });
+    return response.data;
+  }
+
+  /**
+   * Get available products
+   */
+  async getOnboardingProducts(applicationId: string) {
+    const response = await this.client.get(`/onboarding/products?applicationId=${applicationId}`);
+    return response.data;
+  }
+
+  /**
+   * Select product
+   */
+  async selectProduct(applicationId: string, productId: number) {
+    const response = await this.client.post('/onboarding/select-product', { applicationId, productId });
+    return response.data;
+  }
+
+  /**
+   * Accept terms and conditions
+   */
+  async acceptTerms(applicationId: string) {
+    const response = await this.client.post('/onboarding/accept-terms', { applicationId });
+    return response.data;
+  }
+
+  /**
+   * Submit onboarding application
+   */
+  async submitOnboarding(applicationId: string) {
+    const response = await this.client.post('/onboarding/submit', { applicationId });
+    return response.data;
+  }
+
+  /**
+   * Get onboarding status
+   */
+  async getOnboardingStatus(applicationId: string) {
+    const response = await this.client.get(`/onboarding/status/${applicationId}`);
+    return response.data;
+  }
+
+  /**
+   * Resume existing application
+   */
+  async resumeOnboarding(phone: string, otp: string) {
+    const response = await this.client.post('/onboarding/resume', { phone, otp });
+    return response.data;
+  }
+
+  /**
+   * Get application summary
+   */
+  async getApplicationSummary(applicationId: string) {
+    const response = await this.client.get(`/onboarding/summary/${applicationId}`);
+    return response.data;
+  }
+
+  // Generic methods for direct access
+  get(url: string, config?: AxiosRequestConfig) {
+    return this.client.get(url, config);
+  }
+
+  post(url: string, data?: any, config?: AxiosRequestConfig) {
+    return this.client.post(url, data, config);
+  }
+
+  put(url: string, data?: any, config?: AxiosRequestConfig) {
+    return this.client.put(url, data, config);
+  }
+
+  delete(url: string, config?: AxiosRequestConfig) {
+    return this.client.delete(url, config);
+  }
 }
 
 export const apiService = new ApiService();

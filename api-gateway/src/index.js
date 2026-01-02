@@ -26,6 +26,8 @@ const LoanService = require('./services/loanService');
 const authRoutes = require('./routes/auth');
 const accountRoutes = require('./routes/accounts');
 const loanRoutes = require('./routes/loans');
+const qrPayRoutes = require('./routes/qrpay');
+const onboardingRoutes = require('./routes/onboarding');
 
 // Initialize Express app
 const app = express();
@@ -95,6 +97,8 @@ async function initializeApp() {
     app.use('/api/v1/auth', authRoutes(authService));
     app.use('/api/v1/accounts', accountRoutes(accountService));
     app.use('/api/v1/loans', loanRoutes(loanService));
+    app.use('/api/v1/qr-pay', qrPayRoutes(accountService, Audit));
+    app.use('/api/v1/onboarding', onboardingRoutes(mifosClient, config));
 
     // MIFOS health check endpoint
     app.get('/api/v1/mifos/health', async (req, res) => {

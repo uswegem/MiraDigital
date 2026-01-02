@@ -12,11 +12,28 @@ import { navigationLightTheme, navigationDarkTheme } from '../theme';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { OtpVerificationScreen } from '../screens/auth/OtpVerificationScreen';
 
+// Onboarding Screens
+import {
+  WelcomeScreen as OnboardingWelcome,
+  PhoneVerificationScreen as OnboardingPhone,
+  PersonalInfoScreen as OnboardingPersonalInfo,
+  DocumentCaptureScreen as OnboardingDocumentCapture,
+  NidaVerificationScreen as OnboardingNidaVerification,
+  SelfieScreen as OnboardingSelfie,
+  AddressScreen as OnboardingAddress,
+  EmploymentScreen as OnboardingEmployment,
+  ProductSelectionScreen as OnboardingProductSelection,
+  TermsScreen as OnboardingTerms,
+  ReviewScreen as OnboardingReview,
+  StatusScreen as OnboardingStatus,
+} from '../screens/onboarding';
+
 // Main Screens
 import { HomeScreen } from '../screens/home/HomeScreen';
 import { TransferScreen } from '../screens/transfer/TransferScreen';
 import { CardsScreen } from '../screens/cards/CardsScreen';
 import { BillPaymentScreen } from '../screens/bills/BillPaymentScreen';
+import { QRPayScreen } from '../screens/qrpay/QRPayScreen';
 
 // Placeholder screens (to be implemented)
 const AccountsScreen = () => null;
@@ -34,10 +51,38 @@ const PaymentSuccessScreen = () => null;
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+// Onboarding Stack (Customer Self-Service Registration)
+function OnboardingStack() {
+  const theme = useTheme();
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: theme.colors.background },
+        animation: 'slide_from_right',
+      }}
+    >
+      <Stack.Screen name="OnboardingWelcome" component={OnboardingWelcome} />
+      <Stack.Screen name="OnboardingPhone" component={OnboardingPhone} />
+      <Stack.Screen name="PersonalInfo" component={OnboardingPersonalInfo} />
+      <Stack.Screen name="DocumentCapture" component={OnboardingDocumentCapture} />
+      <Stack.Screen name="NidaVerification" component={OnboardingNidaVerification} />
+      <Stack.Screen name="Selfie" component={OnboardingSelfie} />
+      <Stack.Screen name="Address" component={OnboardingAddress} />
+      <Stack.Screen name="Employment" component={OnboardingEmployment} />
+      <Stack.Screen name="ProductSelection" component={OnboardingProductSelection} />
+      <Stack.Screen name="Terms" component={OnboardingTerms} />
+      <Stack.Screen name="Review" component={OnboardingReview} />
+      <Stack.Screen name="Status" component={OnboardingStatus} />
+    </Stack.Navigator>
+  );
+}
+
 // Auth Stack (Login, OTP, Register)
 function AuthStack() {
   const theme = useTheme();
-  
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -47,6 +92,11 @@ function AuthStack() {
     >
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+      <Stack.Screen 
+        name="Onboarding" 
+        component={OnboardingStack}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 }
@@ -167,6 +217,11 @@ function MainStack() {
         name="TapToPay"
         component={TapToPayScreen}
         options={{ title: 'Tap & Pay' }}
+      />
+      <Stack.Screen
+        name="QRPay"
+        component={QRPayScreen}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Transactions"
