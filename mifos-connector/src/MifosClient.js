@@ -129,6 +129,56 @@ class MifosClient {
   // =====================
 
   /**
+   * Create savings account for client
+   */
+  async createSavingsAccount(clientId, productId = 1) {
+    const response = await this.client.post('/savingsaccounts', {
+      clientId,
+      productId,
+      submittedOnDate: this._formatDate(new Date()),
+      locale: 'en',
+      dateFormat: 'dd MMMM yyyy',
+    });
+    return response.data;
+  }
+
+  /**
+   * Approve savings account
+   */
+  async approveSavingsAccount(accountId) {
+    const response = await this.client.post(
+      `/savingsaccounts/${accountId}`,
+      {
+        approvedOnDate: this._formatDate(new Date()),
+        locale: 'en',
+        dateFormat: 'dd MMMM yyyy',
+      },
+      {
+        params: { command: 'approve' },
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * Activate savings account
+   */
+  async activateSavingsAccount(accountId) {
+    const response = await this.client.post(
+      `/savingsaccounts/${accountId}`,
+      {
+        activatedOnDate: this._formatDate(new Date()),
+        locale: 'en',
+        dateFormat: 'dd MMMM yyyy',
+      },
+      {
+        params: { command: 'activate' },
+      }
+    );
+    return response.data;
+  }
+
+  /**
    * Get savings account details
    */
   async getSavingsAccount(accountId) {

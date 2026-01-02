@@ -20,6 +20,19 @@ const userSchema = new mongoose.Schema({
     type: Number,
     index: true,
   },
+  savingsAccountId: {
+    type: Number,
+    index: true,
+  },
+  accountNo: {
+    type: String,
+    index: true,
+  },
+  accountAlias: {
+    type: String,
+    index: true,
+    comment: 'Mobile number used as account alias for deposits',
+  },
   
   // Retail customer fields
   mobileNumber: {
@@ -56,6 +69,48 @@ const userSchema = new mongoose.Schema({
   },
   lockUntil: Date,
   lastLogin: Date,
+  
+  // Biometric authentication fields (Mobile Channel)
+  biometricEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  lastBiometricLogin: Date,
+  lastBiometricType: {
+    type: String,
+    enum: ['fingerprint', 'face', null],
+    default: null,
+  },
+  
+  // KYC Document fields
+  documents: {
+    nidaFront: {
+      filename: String,
+      path: String,
+      uploadedAt: Date,
+      size: Number,
+    },
+    nidaBack: {
+      filename: String,
+      path: String,
+      uploadedAt: Date,
+      size: Number,
+    },
+    selfie: {
+      filename: String,
+      path: String,
+      uploadedAt: Date,
+      size: Number,
+    },
+  },
+  kycStatus: {
+    type: String,
+    enum: ['not_started', 'pending', 'submitted', 'verified', 'rejected'],
+    default: 'not_started',
+  },
+  kycSubmittedAt: Date,
+  kycVerifiedAt: Date,
+  kycRejectionReason: String,
   
   // Permissions (for corporate users)
   permissions: [{

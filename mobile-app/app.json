@@ -1,4 +1,15 @@
 {
-  "name": "miradigital-mobile",
-  "displayName": "MiraDigital"
+  "name": "MiraDigital",
+  "displayName": "MiraDigital",
+  "expo": {
+    "name": "MiraDigital",
+    "slug": "miradigital",
+    "version": "1.0.0",
+    "platforms": ["android"],
+    "extra": {
+      "eas": {
+        "projectId": "ce3130d0-2d12-4f84-8098-407dca455774"
+      }
+    }
+  }
 }

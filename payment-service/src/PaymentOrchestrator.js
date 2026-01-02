@@ -61,6 +61,7 @@ class PaymentOrchestrator {
       BANK_TRANSFER: ['tips'],
       MOBILE_TRANSFER: ['tips'],
       GOVERNMENT: ['gepg'],
+      QR_PAYMENT: ['tips'],
     };
 
     const adapters = typeMap[paymentType] || [];
@@ -99,6 +100,12 @@ class PaymentOrchestrator {
         type: 'MOBILE_TRANSFER',
         name: 'Mobile Money',
         description: 'Send to mobile money wallets',
+        provider: 'tips',
+      });
+      methods.push({
+        type: 'QR_PAYMENT',
+        name: 'QR Pay / TanQR',
+        description: 'Scan QR code to pay merchants',
         provider: 'tips',
       });
     }
@@ -207,6 +214,186 @@ class PaymentOrchestrator {
       ...transferDetails,
       accountType: 'BANK',
     });
+  }
+
+  // ==================
+  // QR PAY / TanQR (via TIPS)
+  // ==================
+
+  /**
+   * Validate QR merchant account through TIPS
+   */
+  async validateQRMerchant({ merchantId, merchantName, qrData }) {
+    if (!this.adapters.tips) {
+      throw new Error('QR payments not available for this tenant');
+    }
+
+    // Parse merchant account from QR data or lookup by ID
+    const merchantAccount = this._extractMerchantAccount(qrData, merchantId);
+    
+    // Validate through TIPS
+    const validation = await this.adapters.tips.validateAccount({
+      accountNumber: merchantAccount.accountNumber,
+      bankCode: merchantAccount.bankCode,
+      accountType: 'BANK',
+    });
+
+    return {
+      valid: validation.valid,
+      merchantName: validation.accountName || merchantName,
+      accountNumber: merchantAccount.accountNumber,
+      bankCode: merchantAccount.bankCode,
+      bankName: validation.bankName || merchantAccount.bankName,
+      message: validation.message,
+    };
+  }
+
+  /**
+   * Lookup merchant by ID or pay bill number
+   */
+  async lookupQRMerchant(merchantId) {
+    if (!this.adapters.tips) {
+      throw new Error('QR payments not available for this tenant');
+    }
+
+    // Query TIPS merchant registry
+    try {
+      const response = await this.adapters.tips.client.get(`/merchants/${merchantId}`);
+      const merchant = response.data.data;
+
+      return {
+        found: true,
+        merchantId: merchant.merchant_id,
+        merchantName: merchant.merchant_name,
+        accountNumber: merchant.account_number,
+        bankCode: merchant.bank_code,
+        bankName: merchant.bank_name,
+        mcc: merchant.mcc,
+        city: merchant.city,
+      };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return {
+          found: false,
+          message: 'Merchant not found',
+        };
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Process QR payment through TIPS
+   */
+  async payQRMerchant({
+    sourceAccount,
+    merchantId,
+    merchantName,
+    merchantAccount,
+    merchantBankCode,
+    amount,
+    reference,
+    qrData,
+    currency = 'TZS',
+    senderName,
+    senderPhone,
+  }) {
+    if (!this.adapters.tips) {
+      throw new Error('QR payments not available for this tenant');
+    }
+
+    logger.info(`Processing QR payment to ${merchantName}`, {
+      tenantId: this.tenantId,
+      merchantId,
+      amount,
+    });
+
+    // Execute payment through TIPS
+    const result = await this.adapters.tips.transfer({
+      sourceAccount,
+      destinationAccount: merchantAccount,
+      destinationBankCode: merchantBankCode,
+      amount,
+      currency,
+      narration: `QR Payment to ${merchantName}${reference ? ` - ${reference}` : ''}`,
+      senderName,
+      senderPhone,
+      recipientName: merchantName,
+      accountType: 'BANK',
+    });
+
+    // Enrich result with QR-specific data
+    return {
+      ...result,
+      paymentType: 'QR_PAYMENT',
+      merchantId,
+      merchantName,
+      qrReference: reference,
+    };
+  }
+
+  /**
+   * Extract merchant account details from QR data
+   */
+  _extractMerchantAccount(qrData, merchantId) {
+    // Default to looking up by merchantId if QR parsing fails
+    let accountNumber = merchantId;
+    let bankCode = '';
+    let bankName = '';
+
+    if (qrData) {
+      try {
+        // Parse EMVCo TLV format to extract account info
+        // Tag 26-51 contains Merchant Account Information
+        let position = 0;
+        while (position < qrData.length) {
+          const tag = qrData.substring(position, position + 2);
+          position += 2;
+          const length = parseInt(qrData.substring(position, position + 2), 10);
+          position += 2;
+          const value = qrData.substring(position, position + length);
+          position += length;
+
+          // Merchant Account Info tags (26-51)
+          if (parseInt(tag) >= 26 && parseInt(tag) <= 51) {
+            // Parse nested TLV for account details
+            let nestedPos = 0;
+            while (nestedPos < value.length) {
+              const nestedTag = value.substring(nestedPos, nestedPos + 2);
+              nestedPos += 2;
+              const nestedLen = parseInt(value.substring(nestedPos, nestedPos + 2), 10);
+              nestedPos += 2;
+              const nestedVal = value.substring(nestedPos, nestedPos + nestedLen);
+              nestedPos += nestedLen;
+
+              switch (nestedTag) {
+                case '00':
+                  // Globally Unique Identifier - can extract bank code
+                  if (nestedVal.startsWith('TZ.')) {
+                    const parts = nestedVal.split('.');
+                    if (parts.length >= 3) {
+                      bankCode = parts[2];
+                    }
+                  }
+                  break;
+                case '01':
+                  // Merchant Account Number
+                  accountNumber = nestedVal;
+                  break;
+                case '02':
+                  // Bank Code
+                  bankCode = nestedVal;
+                  break;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to parse QR data, using merchantId as account', { error: error.message });
+      }
+    }
+
+    return { accountNumber, bankCode, bankName };
   }
 
   /**

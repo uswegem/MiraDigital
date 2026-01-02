@@ -16,6 +16,7 @@ class AuthService {
 
   /**
    * Register new retail customer
+   * Creates: MIFOS Client + Savings Account + Sets mobile number as account alias
    */
   async registerRetail({ mobileNumber, pin, fullName, email, dateOfBirth }) {
     // Check if user already exists
@@ -24,21 +25,30 @@ class AuthService {
       throw { statusCode: 409, code: 'USER_EXISTS', message: 'An account with this mobile number already exists' };
     }
 
-    // Search for client in MIFOS by mobile number
+    // Validate mobile number format (Tanzania: +255XXXXXXXXX or 0XXXXXXXXX)
+    const cleanMobile = mobileNumber.replace(/\s+/g, '');
+    if (!/^(\+255|0)[67]\d{8}$/.test(cleanMobile)) {
+      throw { statusCode: 400, code: 'INVALID_MOBILE', message: 'Invalid mobile number format' };
+    }
+
     let mifosClient = null;
+    let savingsAccount = null;
+
     try {
+      // Step 1: Search for existing client in MIFOS
       const searchResult = await this.mifos.searchClients(mobileNumber);
       if (searchResult && searchResult.length > 0) {
         mifosClient = searchResult[0];
+        logger.info('Found existing MIFOS client', { clientId: mifosClient.id, mobileNumber });
       }
     } catch (error) {
       logger.warn('Client not found in MIFOS, will create new', { mobileNumber });
     }
 
-    // If no MIFOS client, create one
+    // Step 2: Create MIFOS client if doesn't exist
     if (!mifosClient) {
       try {
-        const nameParts = fullName.split(' ');
+        const nameParts = fullName.trim().split(' ');
         const clientData = {
           officeId: 1,
           firstname: nameParts[0],
@@ -51,16 +61,45 @@ class AuthService {
           dateFormat: 'dd MMMM yyyy',
         };
         mifosClient = await this.mifos.createClient(clientData);
+        logger.info('Created MIFOS client', { clientId: mifosClient.clientId || mifosClient.resourceId });
       } catch (error) {
         logger.error('Failed to create MIFOS client', { error: error.message });
-        throw { statusCode: 500, code: 'REGISTRATION_FAILED', message: 'Failed to create banking account' };
+        throw { statusCode: 500, code: 'REGISTRATION_FAILED', message: 'Failed to create banking account. Please try again.' };
       }
     }
 
-    // Hash PIN
+    const clientId = mifosClient.clientId || mifosClient.resourceId || mifosClient.id;
+
+    // Step 3: Create savings account for the client
+    try {
+      // Create savings account (productId: 1 is usually the default savings product)
+      const savingsData = await this.mifos.createSavingsAccount(clientId, 1);
+      const savingsAccountId = savingsData.savingsId || savingsData.resourceId;
+
+      // Approve the savings account
+      await this.mifos.approveSavingsAccount(savingsAccountId);
+
+      // Activate the savings account
+      await this.mifos.activateSavingsAccount(savingsAccountId);
+
+      // Get full account details (including account number)
+      savingsAccount = await this.mifos.getSavingsAccount(savingsAccountId);
+
+      logger.info('Created and activated savings account', {
+        clientId,
+        accountId: savingsAccountId,
+        accountNo: savingsAccount.accountNo,
+      });
+    } catch (error) {
+      logger.error('Failed to create savings account', { error: error.message, clientId });
+      // Don't fail registration if account creation fails - can be created later
+      logger.warn('Continuing registration without savings account');
+    }
+
+    // Step 4: Hash PIN
     const hashedPin = await bcrypt.hash(pin, 12);
 
-    // Create user in local database
+    // Step 5: Create user in local database
     const user = await this.User.create({
       mobileNumber,
       pin: hashedPin,
@@ -68,18 +107,29 @@ class AuthService {
       email,
       dateOfBirth,
       type: 'retail',
-      mifosClientId: mifosClient.clientId || mifosClient.resourceId,
+      mifosClientId: clientId,
+      savingsAccountId: savingsAccount?.id || null,
+      accountNo: savingsAccount?.accountNo || null,
+      accountAlias: mobileNumber, // Mobile number is the account alias
       status: 'active',
       createdAt: new Date(),
     });
 
-    // Generate tokens
+    // Step 6: Generate tokens
     const tokens = this._generateTokens(user);
 
-    logger.info('Retail customer registered', { userId: user._id, mobileNumber });
+    logger.info('Retail customer registered successfully', {
+      userId: user._id,
+      mobileNumber,
+      clientId,
+      accountNo: savingsAccount?.accountNo,
+    });
 
     return {
       user: this._sanitizeUser(user),
+      accountNo: savingsAccount?.accountNo || 'Pending',
+      accountAlias: mobileNumber,
+      message: 'Registration successful! Your mobile number can be used to receive deposits.',
       ...tokens,
     };
   }
@@ -306,6 +356,122 @@ class AuthService {
     await this.redis.del(otpKey);
 
     return { verified: true };
+  }
+
+  /**
+   * Login with PIN (Mobile Channel)
+   */
+  async loginWithPin(pin, useBiometric, ipAddress) {
+    // Find user by PIN
+    const users = await this.User.find({ type: 'retail', status: 'active' });
+    let user = null;
+
+    for (const u of users) {
+      if (u.pin && await bcrypt.compare(pin, u.pin)) {
+        user = u;
+        break;
+      }
+    }
+
+    if (!user) {
+      logger.warn('Failed PIN login attempt', { pin: '****', ipAddress });
+      throw { statusCode: 401, code: 'INVALID_PIN', message: 'Incorrect PIN' };
+    }
+
+    // Check if account is locked
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const remainingMinutes = Math.ceil((user.lockUntil - new Date()) / 60000);
+      throw { 
+        statusCode: 423, 
+        code: 'ACCOUNT_LOCKED', 
+        message: `Account locked due to too many failed attempts. Try again in ${remainingMinutes} minutes.` 
+      };
+    }
+
+    // Reset failed attempts on successful login
+    await this.User.updateOne(
+      { _id: user._id },
+      { 
+        $set: { 
+          failedLoginAttempts: 0, 
+          lockUntil: null, 
+          lastLogin: new Date(),
+          biometricEnabled: useBiometric || user.biometricEnabled || false,
+        } 
+      }
+    );
+
+    // Generate tokens
+    const tokens = this._generateTokens(user);
+
+    // Log authentication event
+    logger.info('PIN login successful', { 
+      userId: user._id, 
+      mobileNumber: user.mobileNumber,
+      ipAddress,
+      biometricEnabled: useBiometric,
+    });
+
+    return {
+      user: this._sanitizeUser(user),
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
+  }
+
+  /**
+   * Login with biometric (Fingerprint/Face ID)
+   */
+  async loginWithBiometric(token, biometricType, timestamp, ipAddress) {
+    try {
+      // Verify JWT token
+      const decoded = jwt.verify(token, config.jwt.secret);
+      
+      // Get user
+      const user = await this.User.findById(decoded.id);
+      if (!user) {
+        throw { statusCode: 404, code: 'USER_NOT_FOUND', message: 'User not found' };
+      }
+
+      // Check if account is active
+      if (user.status !== 'active') {
+        throw { statusCode: 403, code: 'ACCOUNT_INACTIVE', message: 'Your account is not active' };
+      }
+
+      // Check if biometric is enabled for this user
+      if (!user.biometricEnabled) {
+        throw { statusCode: 403, code: 'BIOMETRIC_DISABLED', message: 'Biometric authentication is not enabled for your account' };
+      }
+
+      // Update last biometric login
+      await this.User.updateOne(
+        { _id: user._id },
+        { 
+          $set: { 
+            lastBiometricLogin: new Date(timestamp),
+            lastBiometricType: biometricType,
+            lastLogin: new Date(),
+          } 
+        }
+      );
+
+      // Log biometric authentication event
+      logger.info('Biometric login successful', { 
+        userId: user._id, 
+        mobileNumber: user.mobileNumber,
+        biometricType,
+        timestamp,
+        ipAddress,
+      });
+
+      return {
+        user: this._sanitizeUser(user),
+      };
+    } catch (error) {
+      if (error.statusCode) throw error;
+      logger.error('Biometric login failed', { error: error.message, ipAddress });
+      throw { statusCode: 401, code: 'BIOMETRIC_AUTH_FAILED', message: 'Biometric authentication failed' };
+    }
   }
 
   /**

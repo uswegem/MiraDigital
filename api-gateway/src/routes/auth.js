@@ -113,6 +113,73 @@ module.exports = (authService) => {
   }));
 
   /**
+   * @route POST /auth/login/pin
+   * @desc Login with 4-digit PIN (Mobile Channel)
+   * @access Public
+   */
+  router.post('/login/pin', authLimiter, asyncHandler(async (req, res) => {
+    const { pin, useBiometric } = req.body;
+
+    if (!pin) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'PIN is required' },
+      });
+    }
+
+    // Validate PIN format (4 digits)
+    if (!/^\d{4}$/.test(pin)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'PIN must be 4 digits' },
+      });
+    }
+
+    const result = await authService.loginWithPin(pin, useBiometric, req.ip);
+    
+    res.json({
+      success: true,
+      token: result.token,
+      refreshToken: result.refreshToken,
+      user: result.user,
+    });
+  }));
+
+  /**
+   * @route POST /auth/login/biometric
+   * @desc Login with biometric authentication (Fingerprint/Face ID)
+   * @access Private (requires valid JWT token)
+   */
+  router.post('/login/biometric', asyncHandler(async (req, res) => {
+    const { biometricType, timestamp } = req.body;
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'No token provided' },
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    if (!biometricType || !['fingerprint', 'face'].includes(biometricType)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Valid biometric type is required (fingerprint or face)' },
+      });
+    }
+
+    const result = await authService.loginWithBiometric(token, biometricType, timestamp, req.ip);
+    
+    res.json({
+      success: true,
+      user: result.user,
+      lastBiometricLogin: timestamp,
+    });
+  }));
+
+  /**
    * @route POST /auth/refresh
    * @desc Refresh access token
    * @access Public

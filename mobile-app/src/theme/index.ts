@@ -1,34 +1,100 @@
 import { MD3DarkTheme, MD3LightTheme, configureFonts } from 'react-native-paper';
 import { DefaultTheme, DarkTheme as NavigationDarkTheme } from '@react-navigation/native';
 
-// Font configuration
+// Font configuration - Using SF Pro-style system fonts
+// iOS: SF Pro, Android: Roboto (both are clean, modern sans-serif fonts)
 const fontConfig = {
-  displayLarge: { fontFamily: 'System', fontWeight: '400' as const },
-  displayMedium: { fontFamily: 'System', fontWeight: '400' as const },
-  displaySmall: { fontFamily: 'System', fontWeight: '400' as const },
-  headlineLarge: { fontFamily: 'System', fontWeight: '400' as const },
-  headlineMedium: { fontFamily: 'System', fontWeight: '400' as const },
-  headlineSmall: { fontFamily: 'System', fontWeight: '400' as const },
-  titleLarge: { fontFamily: 'System', fontWeight: '600' as const },
-  titleMedium: { fontFamily: 'System', fontWeight: '500' as const },
-  titleSmall: { fontFamily: 'System', fontWeight: '500' as const },
-  labelLarge: { fontFamily: 'System', fontWeight: '500' as const },
-  labelMedium: { fontFamily: 'System', fontWeight: '500' as const },
-  labelSmall: { fontFamily: 'System', fontWeight: '500' as const },
-  bodyLarge: { fontFamily: 'System', fontWeight: '400' as const },
-  bodyMedium: { fontFamily: 'System', fontWeight: '400' as const },
-  bodySmall: { fontFamily: 'System', fontWeight: '400' as const },
+  displayLarge: { 
+    fontFamily: 'System', 
+    fontWeight: '700' as const,
+    letterSpacing: -0.5,
+  },
+  displayMedium: { 
+    fontFamily: 'System', 
+    fontWeight: '600' as const,
+    letterSpacing: -0.3,
+  },
+  displaySmall: { 
+    fontFamily: 'System', 
+    fontWeight: '600' as const,
+    letterSpacing: -0.2,
+  },
+  headlineLarge: { 
+    fontFamily: 'System', 
+    fontWeight: '600' as const,
+    letterSpacing: -0.3,
+  },
+  headlineMedium: { 
+    fontFamily: 'System', 
+    fontWeight: '600' as const,
+    letterSpacing: -0.2,
+  },
+  headlineSmall: { 
+    fontFamily: 'System', 
+    fontWeight: '600' as const,
+    letterSpacing: -0.1,
+  },
+  titleLarge: { 
+    fontFamily: 'System', 
+    fontWeight: '600' as const,
+    letterSpacing: 0,
+  },
+  titleMedium: { 
+    fontFamily: 'System', 
+    fontWeight: '600' as const,
+    letterSpacing: 0.15,
+  },
+  titleSmall: { 
+    fontFamily: 'System', 
+    fontWeight: '500' as const,
+    letterSpacing: 0.1,
+  },
+  labelLarge: { 
+    fontFamily: 'System', 
+    fontWeight: '500' as const,
+    letterSpacing: 0.1,
+  },
+  labelMedium: { 
+    fontFamily: 'System', 
+    fontWeight: '500' as const,
+    letterSpacing: 0.5,
+  },
+  labelSmall: { 
+    fontFamily: 'System', 
+    fontWeight: '500' as const,
+    letterSpacing: 0.5,
+  },
+  bodyLarge: { 
+    fontFamily: 'System', 
+    fontWeight: '400' as const,
+    letterSpacing: 0.5,
+  },
+  bodyMedium: { 
+    fontFamily: 'System', 
+    fontWeight: '400' as const,
+    letterSpacing: 0.25,
+  },
+  bodySmall: { 
+    fontFamily: 'System', 
+    fontWeight: '400' as const,
+    letterSpacing: 0.4,
+  },
 };
 
-// Default colors (can be overridden by tenant config)
+// Default colors - MiraDigital Brand (Enhanced)
 const defaultColors = {
-  primary: '#1976D2',
-  secondary: '#FF9800',
-  tertiary: '#4CAF50',
-  error: '#D32F2F',
-  success: '#2E7D32',
-  warning: '#ED6C02',
-  info: '#0288D1',
+  primary: '#FFC107',        // Vibrant Amber (Primary)
+  primaryDark: '#FFA000',    // Rich amber
+  primaryLight: '#FFECB3',   // Light amber
+  secondary: '#212121',      // Rich Black
+  tertiary: '#FFFFFF',       // White
+  error: '#F44336',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  info: '#2196F3',
+  // Gradient colors
+  gradientStart: '#FFD54F',  // Light gold
+  gradientEnd: '#FFA726',    // Deep orange
 };
 
 // Light theme
@@ -38,15 +104,20 @@ export const lightTheme = {
   colors: {
     ...MD3LightTheme.colors,
     primary: defaultColors.primary,
+    primaryContainer: defaultColors.primaryLight,
+    onPrimary: '#000000',           // Black text on yellow
+    onPrimaryContainer: '#000000',
     secondary: defaultColors.secondary,
+    onSecondary: '#FFFFFF',         // White text on black
     tertiary: defaultColors.tertiary,
+    onTertiary: '#000000',          // Black text on white
     error: defaultColors.error,
-    background: '#F5F5F5',
+    background: '#FFFFFF',          // White background
     surface: '#FFFFFF',
-    surfaceVariant: '#F0F0F0',
-    onBackground: '#1C1C1C',
-    onSurface: '#1C1C1C',
-    outline: '#79747E',
+    surfaceVariant: '#F5F5F5',
+    onBackground: '#000000',        // Black text
+    onSurface: '#000000',
+    outline: '#E0E0E0',
   },
   custom: {
     success: defaultColors.success,
@@ -54,7 +125,7 @@ export const lightTheme = {
     info: defaultColors.info,
     cardBackground: '#FFFFFF',
     headerBackground: defaultColors.primary,
-    statusBar: 'light-content' as const,
+    statusBar: 'dark-content' as const,  // Dark icons on yellow header
   },
 };
 
@@ -91,9 +162,9 @@ export const navigationLightTheme = {
   colors: {
     ...DefaultTheme.colors,
     primary: defaultColors.primary,
-    background: '#F5F5F5',
+    background: '#FFFFFF',
     card: '#FFFFFF',
-    text: '#1C1C1C',
+    text: '#000000',
     border: '#E0E0E0',
   },
 };
@@ -139,23 +210,68 @@ export function createTenantTheme(tenantBranding?: {
   };
 }
 
-// Spacing constants
+// Spacing constants - More generous, modern spacing
 export const spacing = {
   xs: 4,
   sm: 8,
   md: 16,
-  lg: 24,
+  lg: 20,
   xl: 32,
   xxl: 48,
+  xxxl: 64,
 };
 
-// Border radius constants
+// Border radius constants - Smoother, more rounded
 export const borderRadius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
   round: 9999,
+};
+
+// Animation durations
+export const animationDuration = {
+  fast: 150,
+  normal: 300,
+  slow: 500,
+};
+
+// Shadow presets
+export const shadows = {
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+};
+
+// Gradient presets
+export const gradients = {
+  primary: ['#FFD54F', '#FFA726'],      // Gold to deep orange
+  secondary: ['#424242', '#212121'],    // Dark gradient
+  success: ['#66BB6A', '#43A047'],      // Green gradient
+  info: ['#42A5F5', '#1E88E5'],         // Blue gradient
+  warm: ['#FF6F00', '#FF8F00'],         // Warm gradient
+  cool: ['#00ACC1', '#0097A7'],         // Cool gradient
 };
 
 export type AppTheme = typeof lightTheme;

@@ -5,6 +5,7 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import {
   Text,
@@ -17,6 +18,10 @@ import {
   Divider,
   ActivityIndicator,
 } from 'react-native-paper';
+import Animated, {
+  FadeInDown,
+  ZoomIn,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useCardsStore } from '../../store';
@@ -49,11 +54,11 @@ export function CardsScreen({ navigation }: CardsScreenProps) {
 
   const getCardGradient = (brand: string) => {
     const gradients: { [key: string]: string[] } = {
-      VISA: ['#1A1F71', '#2D4AA8'],
-      MASTERCARD: ['#EB001B', '#F79E1B'],
-      AMEX: ['#006FCF', '#00A3E0'],
+      VISA: ['#1A1F71', '#4A5FC8'],
+      MASTERCARD: ['#EB001B', '#FFA726'],
+      AMEX: ['#006FCF', '#29B6F6'],
     };
-    return gradients[brand] || ['#333333', '#666666'];
+    return gradients[brand] || ['#424242', '#757575'];
   };
 
   const getStatusColor = (status: Card['status']) => {
@@ -115,11 +120,12 @@ export function CardsScreen({ navigation }: CardsScreenProps) {
     );
   };
 
-  const renderCard = ({ item }: { item: Card }) => {
+  const renderCard = ({ item, index }: { item: Card; index: number }) => {
     const colors = getCardGradient(item.cardBrand);
 
     return (
-      <Surface style={styles.cardContainer} elevation={4}>
+      <Animated.View entering={ZoomIn.delay(100 * index).springify()}>
+      <Surface style={styles.cardContainer} elevation={5}>
         {/* Card Design */}
         <View style={[styles.card, { backgroundColor: colors[0] }]}>
           <View style={styles.cardHeader}>
@@ -214,6 +220,7 @@ export function CardsScreen({ navigation }: CardsScreenProps) {
           </View>
         </View>
       </Surface>
+      </Animated.View>
     );
   };
 
@@ -226,7 +233,7 @@ export function CardsScreen({ navigation }: CardsScreenProps) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#F5F5F5' }]}>
       <FlatList
         data={cards}
         keyExtractor={(item) => item.id}
@@ -245,9 +252,9 @@ export function CardsScreen({ navigation }: CardsScreenProps) {
 
       <FAB
         icon="plus"
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        style={[styles.fab, { backgroundColor: '#FFC107' }]}
         onPress={() => navigation.navigate('AddCard')}
-        color="#FFFFFF"
+        color="#212121"
       />
     </SafeAreaView>
   );
@@ -267,9 +274,13 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   cardContainer: {
-    borderRadius: borderRadius.lg,
+    borderRadius: 20,
     marginBottom: spacing.lg,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
   },
   card: {
     padding: spacing.lg,

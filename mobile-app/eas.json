@@ -1,0 +1,29 @@
+{
+  "cli": {
+    "version": ">= 13.2.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "withoutCredentials": false
+      },
+      "node": "20.18.1",
+      "env": {
+        "EXPO_NO_CAPABILITY_SYNC": "1",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      },
+      "cache": {
+        "key": "mobile-app-v1"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk"
+      },
+      "node": "20.18.1"
+    }
+  }
+}

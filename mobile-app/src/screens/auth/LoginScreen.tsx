@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   Platform,
   ScrollView,
   Image,
+  TouchableOpacity,
 } from 'react-native';
 import {
   Text,
@@ -14,9 +15,17 @@ import {
   Surface,
   useTheme,
   HelperText,
+  IconButton,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  FadeInDown,
+  FadeIn,
+} from 'react-native-reanimated';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../store';
+import { useBiometrics } from '../../hooks';
 import { spacing, borderRadius } from '../../theme';
 
 interface LoginScreenProps {
@@ -26,12 +35,52 @@ interface LoginScreenProps {
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const theme = useTheme();
   const { login, isLoading, tenantConfig } = useAuthStore();
+  const { isAvailable: isBiometricsAvailable, isEnabled: isBiometricsEnabled, authenticate, biometryType } = useBiometrics();
 
   const [tenantId, setTenantId] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [savedUsername, setSavedUsername] = useState('');
+
+  useEffect(() => {
+    loadSavedCredentials();
+  }, []);
+
+  const loadSavedCredentials = async () => {
+    try {
+      // Check if user has saved credentials for biometric login
+      const storedUsername = await AsyncStorage.getItem('saved_username');
+      const storedTenantId = await AsyncStorage.getItem('saved_tenant_id');
+      if (storedUsername && storedTenantId) {
+        setSavedUsername(storedUsername);
+        setTenantId(storedTenantId);
+      }
+    } catch (error) {
+      console.log('Failed to load saved credentials');
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    if (!isBiometricsAvailable || !isBiometricsEnabled) {
+      return;
+    }
+
+    try {
+      const biometricName = biometryType === 'FaceID' ? 'Face ID' : biometryType === 'TouchID' ? 'Touch ID' : 'Biometric';
+      const authenticated = await authenticate(`Use ${biometricName} to sign in`);
+      
+      if (authenticated && savedUsername) {
+        // Auto-fill credentials and attempt login
+        // In production, you'd retrieve encrypted password from secure storage
+        setErrors({ general: 'Please enter your password to complete sign in' });
+        setUsername(savedUsername);
+      }
+    } catch (error: any) {
+      setErrors({ general: 'Biometric authentication failed' });
+    }
+  };
 
   const validate = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -58,6 +107,12 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     try {
       const result = await login(username, password, tenantId);
 
+      // Save credentials for future biometric login
+      if (isBiometricsEnabled) {
+        await AsyncStorage.setItem('saved_username', username);
+        await AsyncStorage.setItem('saved_tenant_id', tenantId);
+      }
+
       if (result.requiresOtp) {
         navigation.navigate('OtpVerification', { sessionId: result.sessionId });
       }
@@ -70,7 +125,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#FFC107' }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -80,7 +135,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           keyboardShouldPersistTaps="handled"
         >
           {/* Logo */}
-          <View style={styles.logoContainer}>
+          <Animated.View style={styles.logoContainer} entering={FadeInDown.delay(100).springify()}>
             <Image
               source={
                 tenantConfig?.branding?.logo
@@ -93,13 +148,14 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             <Text variant="headlineMedium" style={styles.appName}>
               MiraDigital
             </Text>
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            <Text variant="bodyMedium" style={{ color: 'rgba(0,0,0,0.6)', fontWeight: '500' }}>
               Mobile Banking
             </Text>
-          </View>
+          </Animated.View>
 
           {/* Login Form */}
-          <Surface style={styles.formContainer} elevation={2}>
+          <Animated.View entering={FadeInDown.delay(300).springify()}>
+          <Surface style={styles.formContainer} elevation={8}>
             <Text variant="titleLarge" style={styles.formTitle}>
               Sign In
             </Text>
@@ -176,12 +232,33 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
               </HelperText>
             )}
 
+            {/* Biometric Login Button */}
+            {isBiometricsAvailable && isBiometricsEnabled && savedUsername && (
+              <TouchableOpacity
+                style={styles.biometricButton}
+                onPress={handleBiometricLogin}
+                activeOpacity={0.7}
+              >
+                <Surface style={styles.biometricSurface} elevation={2}>
+                  <Icon
+                    name={biometryType === 'FaceID' ? 'face-recognition' : 'fingerprint'}
+                    size={32}
+                    color="#FFC107"
+                  />
+                  <Text variant="labelMedium" style={styles.biometricText}>
+                    Use {biometryType === 'FaceID' ? 'Face ID' : biometryType === 'TouchID' ? 'Touch ID' : 'Biometric'}
+                  </Text>
+                </Surface>
+              </TouchableOpacity>
+            )}
+
             <Button
               mode="contained"
               onPress={handleLogin}
               loading={isLoading}
               disabled={isLoading}
               style={styles.loginButton}
+              buttonColor="#FFC107"
               contentStyle={styles.loginButtonContent}
             >
               Sign In
@@ -195,16 +272,17 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
               Forgot Password?
             </Button>
           </Surface>
+          </Animated.View>
 
           {/* Footer */}
-          <View style={styles.footer}>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Animated.View style={styles.footer} entering={FadeIn.delay(500)}>
+            <Text variant="bodySmall" style={{ color: 'rgba(0,0,0,0.6)' }}>
               Don't have an account?
             </Text>
             <Button mode="text" onPress={() => navigation.navigate('Register')}>
               Register
             </Button>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -236,24 +314,49 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   formContainer: {
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
   },
   formTitle: {
     textAlign: 'center',
     marginBottom: spacing.lg,
+    fontWeight: '700',
   },
   input: {
     marginBottom: spacing.sm,
   },
   loginButton: {
-    marginTop: spacing.md,
-  },
+    marginTop: spacing.md,    borderRadius: 12,
+    elevation: 4,  },
   loginButtonContent: {
     paddingVertical: spacing.xs,
   },
   forgotButton: {
     marginTop: spacing.sm,
+  },
+  biometricButton: {
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  biometricSurface: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+    borderRadius: 12,
+    backgroundColor: '#FFF8E1',
+    borderWidth: 1,
+    borderColor: '#FFC107',
+  },
+  biometricText: {
+    marginLeft: spacing.sm,
+    color: '#F57C00',
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',

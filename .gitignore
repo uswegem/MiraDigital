@@ -47,3 +47,4 @@ mobile-app/ios/Pods/
 mobile-app/ios/build/
 *.apk
 *.ipa
+mobile-app/android/*.hprof

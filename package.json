@@ -6,8 +6,7 @@
   "workspaces": [
     "api-gateway",
     "mifos-connector",
-    "web-portal",
-    "mobile-app"
+    "web-portal"
   ],
   "scripts": {
     "install:all": "npm install && npm run install:api && npm run install:connector && npm run install:web",
