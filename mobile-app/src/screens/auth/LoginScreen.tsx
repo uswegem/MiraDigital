@@ -10,23 +10,22 @@ import {
 } from 'react-native';
 import {
   Text,
-  TextInput,
-  Button,
   Surface,
   useTheme,
   HelperText,
-  IconButton,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   FadeInDown,
   FadeIn,
 } from 'react-native-reanimated';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../store';
 import { useBiometrics } from '../../hooks';
-import { spacing, borderRadius } from '../../theme';
+import { spacing, borderRadius, colors } from '../../theme';
+import Button from '../../components/Button';
+import Icon from '../../components/Icon';
+import TextInput from '../../components/TextInput';
 
 interface LoginScreenProps {
   navigation: any;
@@ -50,7 +49,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
   const loadSavedCredentials = async () => {
     try {
-      // Check if user has saved credentials for biometric login
       const storedUsername = await AsyncStorage.getItem('saved_username');
       const storedTenantId = await AsyncStorage.getItem('saved_tenant_id');
       if (storedUsername && storedTenantId) {
@@ -72,8 +70,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       const authenticated = await authenticate(`Use ${biometricName} to sign in`);
       
       if (authenticated && savedUsername) {
-        // Auto-fill credentials and attempt login
-        // In production, you'd retrieve encrypted password from secure storage
         setErrors({ general: 'Please enter your password to complete sign in' });
         setUsername(savedUsername);
       }
@@ -107,7 +103,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     try {
       const result = await login(username, password, tenantId);
 
-      // Save credentials for future biometric login
       if (isBiometricsEnabled) {
         await AsyncStorage.setItem('saved_username', username);
         await AsyncStorage.setItem('saved_tenant_id', tenantId);
@@ -116,7 +111,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       if (result.requiresOtp) {
         navigation.navigate('OtpVerification', { sessionId: result.sessionId });
       }
-      // If no OTP required, auth store will update and navigation will happen automatically
     } catch (error: any) {
       setErrors({
         general: error.response?.data?.message || 'Login failed. Please try again.',
@@ -125,7 +119,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#FFC107' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.primary }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -134,7 +128,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Logo */}
           <Animated.View style={styles.logoContainer} entering={FadeInDown.delay(100).springify()}>
             <Image
               source={
@@ -148,137 +141,87 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             <Text variant="headlineMedium" style={styles.appName}>
               MiraDigital
             </Text>
-            <Text variant="bodyMedium" style={{ color: 'rgba(0,0,0,0.6)', fontWeight: '500' }}>
-              Mobile Banking
-            </Text>
           </Animated.View>
 
-          {/* Login Form */}
           <Animated.View entering={FadeInDown.delay(300).springify()}>
-          <Surface style={styles.formContainer} elevation={8}>
-            <Text variant="titleLarge" style={styles.formTitle}>
-              Sign In
-            </Text>
+            <Surface style={styles.formContainer} elevation={8}>
+              <Text variant="titleLarge" style={styles.formTitle}>Sign In</Text>
+              {errors.general && (
+                <HelperText type="error" visible>
+                  {errors.general}
+                </HelperText>
+              )}
+              <TextInput
+                label="Institution Code"
+                value={tenantId}
+                onChangeText={(text) => {
+                  setTenantId(text.toLowerCase());
+                  setErrors((prev) => ({ ...prev, tenantId: '' }));
+                }}
+                autoCapitalize="none"
+                left={<Icon name="bank" />}
+                error={!!errors.tenantId}
+              />
+              <TextInput
+                label="Username"
+                value={username}
+                onChangeText={(text) => {
+                  setUsername(text);
+                  setErrors((prev) => ({ ...prev, username: '' }));
+                }}
+                autoCapitalize="none"
+                left={<Icon name="account" />}
+                error={!!errors.username}
+              />
+              <TextInput
+                label="Password"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setErrors((prev) => ({ ...prev, password: '' }));
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                left={<Icon name="lock" />}
+                right={
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <Icon name={showPassword ? 'eye-off' : 'eye'} />
+                  </TouchableOpacity>
+                }
+                error={!!errors.password}
+              />
 
-            {errors.general && (
-              <HelperText type="error" visible>
-                {errors.general}
-              </HelperText>
-            )}
+              {isBiometricsAvailable && isBiometricsEnabled && savedUsername && (
+                <Button
+                  onPress={handleBiometricLogin}
+                  variant="secondary"
+                  style={{ marginTop: spacing.md }}
+                >
+                  Sign in with {biometryType === 'FaceID' ? 'Face ID' : 'Touch ID'}
+                </Button>
+              )}
 
-            <TextInput
-              label="Institution Code"
-              value={tenantId}
-              onChangeText={(text) => {
-                setTenantId(text.toLowerCase());
-                setErrors((prev) => ({ ...prev, tenantId: '' }));
-              }}
-              mode="outlined"
-              autoCapitalize="none"
-              autoCorrect={false}
-              left={<TextInput.Icon icon="bank" />}
-              error={!!errors.tenantId}
-              style={styles.input}
-            />
-            {errors.tenantId && (
-              <HelperText type="error" visible>
-                {errors.tenantId}
-              </HelperText>
-            )}
-
-            <TextInput
-              label="Username"
-              value={username}
-              onChangeText={(text) => {
-                setUsername(text);
-                setErrors((prev) => ({ ...prev, username: '' }));
-              }}
-              mode="outlined"
-              autoCapitalize="none"
-              autoCorrect={false}
-              left={<TextInput.Icon icon="account" />}
-              error={!!errors.username}
-              style={styles.input}
-            />
-            {errors.username && (
-              <HelperText type="error" visible>
-                {errors.username}
-              </HelperText>
-            )}
-
-            <TextInput
-              label="Password"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                setErrors((prev) => ({ ...prev, password: '' }));
-              }}
-              mode="outlined"
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              left={<TextInput.Icon icon="lock" />}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? 'eye-off' : 'eye'}
-                  onPress={() => setShowPassword(!showPassword)}
-                />
-              }
-              error={!!errors.password}
-              style={styles.input}
-            />
-            {errors.password && (
-              <HelperText type="error" visible>
-                {errors.password}
-              </HelperText>
-            )}
-
-            {/* Biometric Login Button */}
-            {isBiometricsAvailable && isBiometricsEnabled && savedUsername && (
-              <TouchableOpacity
-                style={styles.biometricButton}
-                onPress={handleBiometricLogin}
-                activeOpacity={0.7}
+              <Button
+                onPress={handleLogin}
+                loading={isLoading}
+                disabled={isLoading}
+                style={{ marginTop: spacing.md }}
               >
-                <Surface style={styles.biometricSurface} elevation={2}>
-                  <Icon
-                    name={biometryType === 'FaceID' ? 'face-recognition' : 'fingerprint'}
-                    size={32}
-                    color="#FFC107"
-                  />
-                  <Text variant="labelMedium" style={styles.biometricText}>
-                    Use {biometryType === 'FaceID' ? 'Face ID' : biometryType === 'TouchID' ? 'Touch ID' : 'Biometric'}
-                  </Text>
-                </Surface>
-              </TouchableOpacity>
-            )}
+                Sign In
+              </Button>
 
-            <Button
-              mode="contained"
-              onPress={handleLogin}
-              loading={isLoading}
-              disabled={isLoading}
-              style={styles.loginButton}
-              buttonColor="#FFC107"
-              contentStyle={styles.loginButtonContent}
-            >
-              Sign In
-            </Button>
-
-            <Button
-              mode="text"
-              onPress={() => navigation.navigate('ForgotPassword')}
-              style={styles.forgotButton}
-            >
-              Forgot Password?
-            </Button>
-          </Surface>
+              <Button
+                onPress={() => navigation.navigate('ForgotPassword')}
+                variant="secondary"
+                style={{ marginTop: spacing.sm }}
+              >
+                Forgot Password?
+              </Button>
+            </Surface>
           </Animated.View>
 
-          {/* Footer */}
           <Animated.View style={styles.footer} entering={FadeIn.delay(500)}>
-            <Text variant="bodySmall" style={{ color: 'rgba(0,0,0,0.6)' }}>
-              Don't have an account?
-            </Text>
+            <Text variant="bodySmall">Don't have an account?</Text>
             <Button mode="text" onPress={() => navigation.navigate('Register')}>
               Register
             </Button>
@@ -317,46 +260,11 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     borderRadius: 24,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
   },
   formTitle: {
     textAlign: 'center',
     marginBottom: spacing.lg,
     fontWeight: '700',
-  },
-  input: {
-    marginBottom: spacing.sm,
-  },
-  loginButton: {
-    marginTop: spacing.md,    borderRadius: 12,
-    elevation: 4,  },
-  loginButtonContent: {
-    paddingVertical: spacing.xs,
-  },
-  forgotButton: {
-    marginTop: spacing.sm,
-  },
-  biometricButton: {
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  biometricSurface: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.md,
-    borderRadius: 12,
-    backgroundColor: '#FFF8E1',
-    borderWidth: 1,
-    borderColor: '#FFC107',
-  },
-  biometricText: {
-    marginLeft: spacing.sm,
-    color: '#F57C00',
-    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',

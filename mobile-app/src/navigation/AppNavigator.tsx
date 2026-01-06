@@ -1,4 +1,5 @@
 import React from 'react';
+import { useColorScheme } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -9,6 +10,7 @@ import { useAuthStore } from '../store';
 import { navigationLightTheme, navigationDarkTheme } from '../theme';
 
 // Auth Screens
+import { SplashScreen } from '../screens/auth/SplashScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { PinLoginScreen } from '../screens/auth/PinLoginScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
@@ -43,7 +45,6 @@ import { CardsScreen } from '../screens/cards/CardsScreen';
 import { BillPaymentScreen } from '../screens/bills/BillPaymentScreen';
 import { BillPaymentSuccessScreen } from '../screens/bills/BillPaymentSuccessScreen';
 import { QRPayScreen } from '../screens/qrpay/QRPayScreen';
-import { LipaScreen } from '../screens/lipa/LipaScreen';
 import { LipaSuccessScreen } from '../screens/lipa/LipaSuccessScreen';
 import { AccountsScreen } from '../screens/accounts/AccountsScreen';
 import { TransactionsScreen } from '../screens/transactions/TransactionsScreen';
@@ -104,8 +105,9 @@ function AuthStack() {
         headerShown: false,
         contentStyle: { backgroundColor: theme.colors.background },
       }}
-      initialRouteName="PinLogin"
+      initialRouteName="Splash"
     >
+      <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen name="PinLogin" component={PinLoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} />
@@ -299,11 +301,6 @@ function MainStack() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="Lipa"
-        component={LipaScreen}
-        options={{ title: 'Lipa' }}
-      />
-      <Stack.Screen
         name="LipaSuccess"
         component={LipaSuccessScreen}
         options={{
@@ -381,10 +378,10 @@ function MainStack() {
 // Root Navigator
 export function AppNavigator() {
   const { isAuthenticated } = useAuthStore();
-  const isDark = false; // TODO: Get from theme context
+  const isDarkMode = useColorScheme() === 'dark';
 
   return (
-    <NavigationContainer theme={isDark ? navigationDarkTheme : navigationLightTheme}>
+    <NavigationContainer theme={isDarkMode ? navigationDarkTheme : navigationLightTheme}>
       {isAuthenticated ? <MainStack /> : <AuthStack />}
     </NavigationContainer>
   );

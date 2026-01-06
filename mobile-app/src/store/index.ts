@@ -108,9 +108,6 @@ export const useAuthStore = create<AuthState>()(
         try {
           // OFFLINE MODE: Skip backend API call for testing
           if (DEV_CONFIG.OFFLINE_MODE) {
-            // Simulate network delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
             set({
               isAuthenticated: true,
               user: DEV_CONFIG.MOCK_USER,
@@ -152,8 +149,6 @@ export const useAuthStore = create<AuthState>()(
         try {
           // OFFLINE MODE: Skip backend API call for testing
           if (DEV_CONFIG.OFFLINE_MODE) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
             set({
               isAuthenticated: true,
               user: DEV_CONFIG.MOCK_USER,
@@ -189,8 +184,6 @@ export const useAuthStore = create<AuthState>()(
         try {
           // OFFLINE MODE: Skip backend API call for testing
           if (DEV_CONFIG.OFFLINE_MODE) {
-            await new Promise(resolve => setTimeout(resolve, 400));
-            
             set({
               isAuthenticated: true,
               user: DEV_CONFIG.MOCK_USER,
@@ -349,49 +342,57 @@ interface AccountsState {
   refreshBalance: (accountId: string) => Promise<void>;
 }
 
-export const useAccountsStore = create<AccountsState>((set, get) => ({
-  accounts: [],
-  selectedAccount: null,
-  isLoading: false,
-  lastUpdated: null,
+export const useAccountsStore = create<AccountsState>()(
+  persist(
+    (set, get) => ({
+      accounts: [],
+      selectedAccount: null,
+      isLoading: false,
+      lastUpdated: null,
 
-  loadAccounts: async () => {
-    set({ isLoading: true });
-    try {
-      const accounts = await apiService.getAccounts();
-      set({
-        accounts,
-        selectedAccount: accounts[0] || null,
-        isLoading: false,
-        lastUpdated: Date.now(),
-      });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
+      loadAccounts: async () => {
+        set({ isLoading: true });
+        try {
+          const accounts = await apiService.getAccounts();
+          set({
+            accounts,
+            selectedAccount: accounts[0] || null,
+            isLoading: false,
+            lastUpdated: Date.now(),
+          });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      selectAccount: (account) => set({ selectedAccount: account }),
+
+      refreshBalance: async (accountId) => {
+        try {
+          const balance = await apiService.getAccountBalance(accountId);
+          set((state) => ({
+            accounts: state.accounts.map((acc) =>
+              acc.id === accountId
+                ? { ...acc, balance: balance.balance, availableBalance: balance.availableBalance }
+                : acc
+            ),
+            selectedAccount:
+              state.selectedAccount?.id === accountId
+                ? { ...state.selectedAccount, balance: balance.balance, availableBalance: balance.availableBalance }
+                : state.selectedAccount,
+          }));
+        } catch (error) {
+          console.error('Failed to refresh balance:', error);
+        }
+      },
+    }),
+    {
+      name: 'accounts-storage',
+      storage: createJSONStorage(() => AsyncStorage),
     }
-  },
-
-  selectAccount: (account) => set({ selectedAccount: account }),
-
-  refreshBalance: async (accountId) => {
-    try {
-      const balance = await apiService.getAccountBalance(accountId);
-      set((state) => ({
-        accounts: state.accounts.map((acc) =>
-          acc.id === accountId
-            ? { ...acc, balance: balance.balance, availableBalance: balance.availableBalance }
-            : acc
-        ),
-        selectedAccount:
-          state.selectedAccount?.id === accountId
-            ? { ...state.selectedAccount, balance: balance.balance, availableBalance: balance.availableBalance }
-            : state.selectedAccount,
-      }));
-    } catch (error) {
-      console.error('Failed to refresh balance:', error);
-    }
-  },
-}));
+  )
+);
 
 // Transactions Store
 interface Transaction {
@@ -416,52 +417,60 @@ interface TransactionsState {
   reset: () => void;
 }
 
-export const useTransactionsStore = create<TransactionsState>((set, get) => ({
-  transactions: [],
-  isLoading: false,
-  hasMore: true,
-  page: 1,
+export const useTransactionsStore = create<TransactionsState>()(
+  persist(
+    (set, get) => ({
+      transactions: [],
+      isLoading: false,
+      hasMore: true,
+      page: 1,
 
-  loadTransactions: async (accountId, refresh = false) => {
-    if (refresh) {
-      set({ transactions: [], page: 1, hasMore: true });
+      loadTransactions: async (accountId, refresh = false) => {
+        if (refresh) {
+          set({ transactions: [], page: 1, hasMore: true });
+        }
+        
+        set({ isLoading: true });
+        try {
+          const response = await apiService.getTransactions(accountId, { page: 1, limit: 20 });
+          set({
+            transactions: response.transactions,
+            hasMore: response.hasMore,
+            page: 1,
+            isLoading: false,
+          });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      loadMore: async (accountId) => {
+        const { hasMore, isLoading, page, transactions } = get();
+        if (!hasMore || isLoading) return;
+
+        set({ isLoading: true });
+        try {
+          const response = await apiService.getTransactions(accountId, { page: page + 1, limit: 20 });
+          set({
+            transactions: [...transactions, ...response.transactions],
+            hasMore: response.hasMore,
+            page: page + 1,
+            isLoading: false,
+          });
+        } catch (error) {
+          set({ isLoading: false });
+        }
+      },
+
+      reset: () => set({ transactions: [], page: 1, hasMore: true }),
+    }),
+    {
+      name: 'transactions-storage',
+      storage: createJSONStorage(() => AsyncStorage),
     }
-    
-    set({ isLoading: true });
-    try {
-      const response = await apiService.getTransactions(accountId, { page: 1, limit: 20 });
-      set({
-        transactions: response.transactions,
-        hasMore: response.hasMore,
-        page: 1,
-        isLoading: false,
-      });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
-  },
-
-  loadMore: async (accountId) => {
-    const { hasMore, isLoading, page, transactions } = get();
-    if (!hasMore || isLoading) return;
-
-    set({ isLoading: true });
-    try {
-      const response = await apiService.getTransactions(accountId, { page: page + 1, limit: 20 });
-      set({
-        transactions: [...transactions, ...response.transactions],
-        hasMore: response.hasMore,
-        page: page + 1,
-        isLoading: false,
-      });
-    } catch (error) {
-      set({ isLoading: false });
-    }
-  },
-
-  reset: () => set({ transactions: [], page: 1, hasMore: true }),
-}));
+  )
+);
 
 // Cards Store
 interface Card {
@@ -486,61 +495,134 @@ interface CardsState {
   resumeCard: (cardId: string) => Promise<void>;
 }
 
-export const useCardsStore = create<CardsState>((set, get) => ({
-  cards: [],
-  isLoading: false,
+export const useCardsStore = create<CardsState>()(
+  persist(
+    (set, get) => ({
+      cards: [],
+      isLoading: false,
 
-  loadCards: async () => {
-    set({ isLoading: true });
-    try {
-      const cards = await apiService.getCards();
-      set({ cards, isLoading: false });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
+      loadCards: async () => {
+        set({ isLoading: true });
+        try {
+          const cards = await apiService.getCards();
+          set({ cards, isLoading: false });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      addCard: async (cardData) => {
+        set({ isLoading: true });
+        try {
+          const newCard = await apiService.addCard(cardData);
+          set((state) => ({
+            cards: [...state.cards, newCard],
+            isLoading: false,
+          }));
+          return newCard;
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      removeCard: async (cardId) => {
+        await apiService.removeCard(cardId);
+        set((state) => ({
+          cards: state.cards.filter((c) => c.id !== cardId),
+        }));
+      },
+
+      suspendCard: async (cardId, reason) => {
+        await apiService.suspendCard(cardId, reason);
+        set((state) => ({
+          cards: state.cards.map((c) =>
+            c.id === cardId ? { ...c, status: 'SUSPENDED' as const } : c
+          ),
+        }));
+      },
+
+      resumeCard: async (cardId) => {
+        await apiService.resumeCard(cardId);
+        set((state) => ({
+          cards: state.cards.map((c) =>
+            c.id === cardId ? { ...c, status: 'ACTIVE' as const } : c
+          ),
+        }));
+      },
+    }),
+    {
+      name: 'cards-storage',
+      storage: createJSONStorage(() => AsyncStorage),
     }
-  },
+  )
+);
 
-  addCard: async (cardData) => {
-    set({ isLoading: true });
-    try {
-      const newCard = await apiService.addCard(cardData);
-      set((state) => ({
-        cards: [...state.cards, newCard],
-        isLoading: false,
-      }));
-      return newCard;
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
+// Biller Store
+interface BillerUsage {
+  billerCode: string;
+  count: number;
+  lastUsed: string;
+}
+
+interface BillerStore {
+  billerUsage: BillerUsage[];
+  
+  // Actions
+  trackBillerUsage: (billerCode: string) => void;
+  getFrequentlyUsed: (limit?: number) => string[];
+  clearUsage: () => void;
+}
+
+export const useBillerStore = create<BillerStore>()(
+  persist(
+    (set, get) => ({
+      billerUsage: [],
+
+      trackBillerUsage: (billerCode: string) => {
+        const { billerUsage } = get();
+        const existing = billerUsage.find((b) => b.billerCode === billerCode);
+
+        if (existing) {
+          set({
+            billerUsage: billerUsage.map((b) =>
+              b.billerCode === billerCode
+                ? { ...b, count: b.count + 1, lastUsed: new Date().toISOString() }
+                : b
+            ),
+          });
+        } else {
+          set({
+            billerUsage: [
+              ...billerUsage,
+              { billerCode, count: 1, lastUsed: new Date().toISOString() },
+            ],
+          });
+        }
+      },
+
+      getFrequentlyUsed: (limit = 5) => {
+        const { billerUsage } = get();
+        
+        // Sort by usage count (primary) and last used date (secondary)
+        const sorted = [...billerUsage].sort((a, b) => {
+          if (b.count !== a.count) {
+            return b.count - a.count; // Higher count first
+          }
+          return new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime(); // More recent first
+        });
+
+        return sorted.slice(0, limit).map((b) => b.billerCode);
+      },
+
+      clearUsage: () => {
+        set({ billerUsage: [] });
+      },
+    }),
+    {
+      name: 'biller-usage-storage',
+      storage: createJSONStorage(() => AsyncStorage),
     }
-  },
-
-  removeCard: async (cardId) => {
-    await apiService.removeCard(cardId);
-    set((state) => ({
-      cards: state.cards.filter((c) => c.id !== cardId),
-    }));
-  },
-
-  suspendCard: async (cardId, reason) => {
-    await apiService.suspendCard(cardId, reason);
-    set((state) => ({
-      cards: state.cards.map((c) =>
-        c.id === cardId ? { ...c, status: 'SUSPENDED' as const } : c
-      ),
-    }));
-  },
-
-  resumeCard: async (cardId) => {
-    await apiService.resumeCard(cardId);
-    set((state) => ({
-      cards: state.cards.map((c) =>
-        c.id === cardId ? { ...c, status: 'ACTIVE' as const } : c
-      ),
-    }));
-  },
-}));
-
-// Export biller store
-export { useBillerStore } from './billerStore';
+  )
+);

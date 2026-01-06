@@ -1,4 +1,4 @@
-# MiraDigital Mobile App
+# Let'sGo Mobile App
 
 React Native mobile application for retail customers.
 

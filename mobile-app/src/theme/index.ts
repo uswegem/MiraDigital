@@ -199,6 +199,7 @@ export function createTenantTheme(tenantBranding?: {
       ...baseTheme.colors,
       primary: tenantBranding.primaryColor || baseTheme.colors.primary,
       secondary: tenantBranding.secondaryColor || baseTheme.colors.secondary,
+      onPrimary: tenantBranding.primaryColor ? '#FFFFFF' : baseTheme.colors.onPrimary,
     },
     custom: {
       ...baseTheme.custom,

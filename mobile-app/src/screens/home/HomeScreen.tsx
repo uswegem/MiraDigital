@@ -15,16 +15,15 @@ import {
   Surface,
   useTheme,
   Avatar,
-  IconButton,
   Divider,
-  Button,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore, useAccountsStore } from '../../store';
 import { spacing } from '../../theme';
 import { colors } from '../../theme/colors';
+import Button from '../../components/Button'; // Using the new custom Button component
+import Icon from '../../components/Icon'; // Using the new custom Icon component
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - spacing.lg * 2;
@@ -203,9 +202,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           </View>
         </View>
         <View style={styles.headerRight}>
-          <IconButton
-            icon="bell-outline"
-            iconColor="#FFFFFF"
+          <Icon
+            name="bell-outline"
+            color="#FFFFFF"
             size={26}
             onPress={() => navigation.navigate('Notifications')}
             style={styles.notificationButton}
@@ -235,10 +234,10 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 {selectedAccount?.accountNo || '****-****-****'}
               </Text>
             </View>
-            <IconButton
-              icon={showBalance ? 'eye-off-outline' : 'eye-outline'}
+            <Icon
+              name={showBalance ? 'eye-off-outline' : 'eye-outline'}
               size={22}
-              iconColor="#757575"
+              color="#757575"
               onPress={() => setShowBalance(!showBalance)}
             />
           </View>
@@ -358,14 +357,15 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Customize Quick Actions</Text>
-              <IconButton
-                icon="close"
+              <Icon
+                name="close"
                 size={24}
                 onPress={() => setShowQuickActionsModal(false)}
               />
             </View>
+            
             <Text style={styles.modalSubtitle}>
-              Select up to 4 services for quick access ({tempSelectedIds.length}/4)
+              Select up to 4 services for quick access ({tempSelectedIds.length}/4 selected)
             </Text>
 
             <View style={styles.searchContainer}>
@@ -377,14 +377,20 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Icon name="close-circle" size={20} color="#9E9E9E" />
+                </TouchableOpacity>
+              )}
             </View>
 
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
               style={styles.categoryScroll}
+              contentContainerStyle={styles.categoryContainer}
             >
-              {SERVICE_CATEGORIES.map(cat => (
+              {SERVICE_CATEGORIES.map((cat) => (
                 <TouchableOpacity
                   key={cat.id}
                   style={[
@@ -409,43 +415,51 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
             </ScrollView>
 
             <ScrollView style={styles.servicesList} showsVerticalScrollIndicator={false}>
-              {filteredServices.map(service => {
-                const isSelected = tempSelectedIds.includes(service.id);
-                const isDisabled = !isSelected && tempSelectedIds.length >= 4;
-                return (
-                  <TouchableOpacity
-                    key={service.id}
-                    style={[
-                      styles.serviceOption,
-                      isSelected && styles.serviceOptionSelected,
-                      isDisabled && styles.serviceOptionDisabled,
-                    ]}
-                    onPress={() => toggleServiceSelection(service.id)}
-                    disabled={isDisabled}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.serviceOptionIcon, { backgroundColor: `${service.color}20` }]}>
-                      <Icon name={service.icon} size={24} color={service.color} />
-                    </View>
-                    <View style={styles.serviceOptionInfo}>
-                      <Text style={[
-                        styles.serviceOptionLabel,
-                        isDisabled && styles.serviceOptionLabelDisabled,
-                      ]}>
-                        {service.label}
-                      </Text>
-                      <Text style={styles.serviceOptionCategory}>
-                        {service.category.charAt(0).toUpperCase() + service.category.slice(1)}
-                      </Text>
-                    </View>
-                    {isSelected && (
-                      <View style={styles.checkmark}>
-                        <Icon name="check-circle" size={24} color={colors.success} />
+              {filteredServices.length === 0 ? (
+                <View style={styles.noResults}>
+                  <Icon name="magnify-close" size={48} color="#BDBDBD" />
+                  <Text style={styles.noResultsText}>No services found</Text>
+                </View>
+              ) : (
+                filteredServices.map((service) => {
+                  const isSelected = tempSelectedIds.includes(service.id);
+                  const isDisabled = !isSelected && tempSelectedIds.length >= 4;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={service.id}
+                      style={[
+                        styles.serviceOption,
+                        isSelected && styles.serviceOptionSelected,
+                        isDisabled && styles.serviceOptionDisabled,
+                      ]}
+                      onPress={() => toggleServiceSelection(service.id)}
+                      disabled={isDisabled}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.serviceOptionIcon, { backgroundColor: `${service.color}20` }]}>
+                        <Icon name={service.icon} size={24} color={service.color} />
                       </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+                      <View style={styles.serviceOptionInfo}>
+                        <Text style={[
+                          styles.serviceOptionLabel,
+                          isDisabled && styles.serviceOptionLabelDisabled,
+                        ]}>
+                          {service.label}
+                        </Text>
+                        <Text style={styles.serviceOptionCategory}>
+                          {service.category.charAt(0).toUpperCase() + service.category.slice(1)}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <View style={styles.checkmark}>
+                          <Icon name="check-circle" size={24} color={colors.success} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
             </ScrollView>
 
             <View style={styles.modalActions}>
@@ -453,7 +467,6 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 mode="outlined"
                 onPress={() => setShowQuickActionsModal(false)}
                 style={styles.modalButton}
-                textColor={colors.textSecondary}
               >
                 Cancel
               </Button>
@@ -461,7 +474,6 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 mode="contained"
                 onPress={saveQuickActions}
                 style={styles.modalButton}
-                buttonColor={colors.primary}
                 disabled={tempSelectedIds.length === 0}
               >
                 Save ({tempSelectedIds.length})
