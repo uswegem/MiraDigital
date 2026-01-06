@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Pressable } from 'react-native';
 import { Button as PaperButton, useTheme } from 'react-native-paper';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { spacing, borderRadius } from '../theme';
 
 interface ButtonProps extends React.ComponentProps<typeof PaperButton> {
@@ -9,6 +10,13 @@ interface ButtonProps extends React.ComponentProps<typeof PaperButton> {
 
 export function Button({ variant = 'primary', style, ...props }: ButtonProps) {
   const theme = useTheme();
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
 
   const getButtonColors = () => {
     switch (variant) {
@@ -24,7 +32,7 @@ export function Button({ variant = 'primary', style, ...props }: ButtonProps) {
         };
       case 'transfer':
         return {
-          buttonColor: theme.colors.tertiary, // A specific color for transfers could be added
+          buttonColor: theme.colors.tertiary,
           textColor: '#000000',
         };
       case 'primary':
@@ -37,12 +45,19 @@ export function Button({ variant = 'primary', style, ...props }: ButtonProps) {
   };
 
   return (
-    <PaperButton
-      style={[styles.button, style]}
-      labelStyle={styles.label}
-      {...getButtonColors()}
-      {...props}
-    />
+    <Pressable
+      onPressIn={() => (scale.value = withSpring(0.98))}
+      onPressOut={() => (scale.value = withSpring(1))}
+    >
+      <Animated.View style={animatedStyle}>
+        <PaperButton
+          style={[styles.button, style]}
+          labelStyle={styles.label}
+          {...getButtonColors()}
+          {...props}
+        />
+      </Animated.View>
+    </Pressable>
   );
 }
 

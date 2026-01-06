@@ -104,6 +104,7 @@ function AuthStack() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: theme.colors.background },
+        animation: 'slide_from_right',
       }}
       initialRouteName="Splash"
     >
@@ -235,6 +236,7 @@ function MainStack() {
           color: theme.colors.onSurface,
         },
         headerTintColor: theme.colors.primary,
+        animation: 'slide_from_right',
       }}
     >
       <Stack.Screen
